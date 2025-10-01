@@ -29,6 +29,8 @@ def worker(
     found_passwords: dict,
     hashes: Set[str],
 ) -> None:
+    if len(found_passwords) >= len(hashes):
+        return
     for i in range(start, end):
         str_i = str(i).zfill(8)
         hashed = sha256_hash_str(str_i)
