@@ -1,6 +1,7 @@
 import time
 from hashlib import sha256
-
+from multiprocessing import Pool, Manager, cpu_count
+from typing import List
 
 PASSWORDS_TO_BRUTE_FORCE = [
     "b4061a4bcfe1a2cbf78286f3fab2fb578266d1bd16c414c650c5ac04dfc696e1",
@@ -15,13 +16,45 @@ PASSWORDS_TO_BRUTE_FORCE = [
     "e5f3ff26aa8075ce7513552a9af1882b4fbc2a47a3525000f6eb887ab9622207",
 ]
 
+SET_OF_HASHES = set(PASSWORDS_TO_BRUTE_FORCE)
 
 def sha256_hash_str(to_hash: str) -> str:
     return sha256(to_hash.encode("utf-8")).hexdigest()
 
 
+def worker(
+    start: int,
+    end: int,
+    found_passwords: dict,
+    hashes: List[str] = SET_OF_HASHES,
+) -> None:
+    for i in range(start, end):
+        str_i = str(i).zfill(8)
+        hashed = sha256_hash_str(str_i)
+        if hashed in hashes and hashed not in found_passwords:
+            found_passwords[hashed] = str_i
+            print(f"Found password for hash {hashed}: {str_i}")
+
+
 def brute_force_password() -> None:
-    pass
+    manager = Manager()
+    found_passwords = manager.dict()
+
+    num_cpus = cpu_count()
+    pool = Pool(num_cpus)
+
+    total_numbers = 100_000_000
+    chunk_size = total_numbers // num_cpus
+
+    tasks = []
+    for i in range(num_cpus):
+        start = i * chunk_size
+        end = (i + 1) * chunk_size if i != num_cpus - 1 else total_numbers
+        tasks.append((start, end, found_passwords))
+
+    pool.starmap(worker, tasks)
+    pool.close()
+    pool.join()
 
 
 if __name__ == "__main__":
